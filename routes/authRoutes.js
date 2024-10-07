@@ -5,19 +5,19 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-router.post("/register", async (req, res) => {
+router.post("/register", (req, res) => {
   const { email, username, password } = req.body;
   const hasedPassword = bcrypt.hashSync(password, 10);
 
-  await pool.query("INSERT INTO users (email, username, password) VALUES (?, ?, ?)", [email, username, hasedPassword], (err, result) => {
+  pool.query("INSERT INTO users (email, username, password) VALUES (?, ?, ?)", [email, username, hasedPassword], (err, result) => {
     if (err) res.status(400).json("Error");
     res.status(201).json({ message: "User created" });
   });
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", (req, res) => {
   const { email, password } = req.body;
-  await pool.query("SELECT * FROM users WHERE email = ?", [email], async (err, result) => {
+  pool.query("SELECT * FROM users WHERE email = ?", [email], async (err, result) => {
     if (err) res.status(400).json({ message: "Error" });
     if (result.length) {
       const user = result[0];
