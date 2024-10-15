@@ -6,11 +6,26 @@ const router = express.Router();
 router.get("/comment:id", (req, res) => {
   const id = req.params.id;
 
-  pool.query(`SELECT * FROM comments WHERE post_id = ?`, [id], (err, result) => {
+  pool.query(`
+    SELECT c.id, p.id, c.content, u.username, c.created_at, u.img_url
+    FROM comments as c
+    JOIN posting p on p.id = c.post_id
+    JOIN users u on u.id = p.user_id
+    WHERE c.post_id = ?;
+`, [id], (err, result) => {
     if (err) res.status(400).json({ message: "Error" });
     res.status(200).send(result);
   });
 });
+
+router.delete("/delete/:id", (req, res) => {
+  const id = req.params.id;
+
+  pool.query("DELETE FROM comments WHERE id = ?", [id], (err, result) => {
+    if (err) res.status(400).json({ message: "Error" });
+    res.status(200).json({ message: "Comment deleted" });
+  })
+})
 
 router.post("create", (req, res) => {
   const { user_id, post_id, content } = req.body;
@@ -21,6 +36,7 @@ router.post("create", (req, res) => {
   });
 
 })
+
 
 export default router;
 
