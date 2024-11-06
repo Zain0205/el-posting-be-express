@@ -29,7 +29,7 @@ router.post("/login", (req, res) => {
         res.status(400).json({ message: "Invalid credentials" });
       }
     } else {
-      res.status(400).json({ message: "Invalid credentials" });
+      res.status(404).json({ message: "User Not Found" });
     }
   });
 });
