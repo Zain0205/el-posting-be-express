@@ -1,20 +1,46 @@
 import express from "express";
 import pool from "../models/db.js";
+import multer from "multer";
+import path from "path";
 
 const router = express.Router();
 
-router.post("/create", (req, res) => {
-  const { user_id, img_url, content } = req.body;
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
 
-  pool.query("INSERT INTO posting (id, img_url, content) VALUES (?, ?, ?)", [user_id, img_url, content], (err, result) => {
-    if (err) res.status(400).json({ message: "Error" });
+const upload = multer({ storage });
+
+router.post("/create", upload.single("img_url"), (req, res) => {
+  const { user_id, content } = req.body;
+  const img_url = req.file ? `/uploads/${req.file.filename}` : null;
+
+  // console.log(req.file);
+  // console.log(req.body);
+
+  pool.query("INSERT INTO posting (user_id, img_url, content) VALUES (?, ?, ?)", [user_id, img_url, content], (err, result) => {
+    if (err) {
+
+      console.log(err);
+      return res.status(400).json({ message: "Error" });
+    }
     res.status(201).json({ message: "Post created" });
   });
 });
 
 router.get("/feed", (req, res) => {
-  pool.query(`SELECT * FROM posting`, (err, result) => {
-    if (err) res.status(400).json({ message: "Error" });
+  pool.query(`
+    SELECT p.id, p.content, p.img_url, p.created_at, p.like_count, u.username, u.img_url as profile_img 
+    FROM posting as p 
+    JOIN users u on u.id = p.user_id 
+    ORDER BY p.created_at DESC
+    `, (err, result) => {
+    if (err) return res.status(400).json({ message: "Error" });
     res.status(200).send(result);
   });
 });
@@ -31,14 +57,18 @@ router.get("/feed/:id", (req, res) => {
 router.get("/feed/detail/:id", (req, res) => {
   const id = req.params.id;
 
-  pool.query(`
+  pool.query(
+    `
     SELECT p.id, p.content, p.img_url, p.created_at, p.like_count, u.username 
     FROM posting as p 
     JOIN users u on u.id = p.user_id 
-    WHERE p.id = ?`, [id], (err, result) => {
+    WHERE p.id = ?`,
+    [id],
+    (err, result) => {
       if (err) res.status(400).json({ message: "Error" });
       res.status(200).send(result);
-    });
+    }
+  );
 });
 
 router.delete("/delete/:id", (req, res) => {

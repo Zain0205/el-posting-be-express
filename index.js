@@ -17,11 +17,14 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
+
+
 app.use("/api/auth", authRoutes);
 app.use("/api/post", postRoutes);
 app.use("/api/comment", commentRoutes);
 app.use("/api/like", likeRoutes);
-app.use("/api/folloe", followRoutes);
+app.use("/api/follow", followRoutes);
 
 server.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);
