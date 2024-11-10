@@ -2,6 +2,7 @@ import express from "express";
 import pool from "../models/db.js";
 import multer from "multer";
 import path from "path";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -16,12 +17,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post("/create", upload.single("img_url"), (req, res) => {
-  const { user_id, content } = req.body;
+router.post("/create", authMiddleware, upload.single("img_url"), (req, res) => {
+  const { content } = req.body;
   const img_url = req.file ? `/uploads/${req.file.filename}` : null;
-
-  // console.log(req.file);
-  // console.log(req.body);
+  const user_id = req.user.id;
 
   pool.query("INSERT INTO posting (user_id, img_url, content) VALUES (?, ?, ?)", [user_id, img_url, content], (err, result) => {
     if (err) {
@@ -45,10 +44,10 @@ router.get("/feed", (req, res) => {
   });
 });
 
-router.get("/feed/:id", (req, res) => {
-  const id = req.params.id;
+router.get("/user/feed", authMiddleware, (req, res) => {
+  const id = req.user.id;
 
-  pool.query(`SELECT * FROM posting WHERE user_id = ?`, [id], (err, result) => {
+  pool.query(`SELECT * FROM posting p WHERE user_id = ? ORDER BY p.created_at DESC`, [id], (err, result) => {
     if (err) res.status(400).json({ message: "Error" });
     res.status(200).send(result);
   });
