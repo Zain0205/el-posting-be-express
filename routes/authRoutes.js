@@ -5,6 +5,8 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
+
+
 router.post("/register", (req, res) => {
   const { email, username, password } = req.body;
   const hasedPassword = bcrypt.hashSync(password, 10);
@@ -24,6 +26,7 @@ router.post("/login", (req, res) => {
       const isPasswordCorrect = bcrypt.compareSync(password, user.password);
       if (isPasswordCorrect) {
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+        res.cookie("token", token, { httpOnly: true, secure: false, maxAge: 24 * 60 * 60 * 1000 });
         res.status(200).json({ token });
       } else {
         res.status(400).json({ message: "Invalid credentials" });
@@ -32,6 +35,11 @@ router.post("/login", (req, res) => {
       res.status(404).json({ message: "User Not Found" });
     }
   });
+});
+
+router.post("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.status(200).json({ message: "Logout success" });
 });
 
 export default router;
