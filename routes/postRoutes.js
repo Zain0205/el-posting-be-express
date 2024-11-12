@@ -34,7 +34,7 @@ router.post("/create", authMiddleware, upload.single("img_url"), (req, res) => {
 
 router.get("/feed", (req, res) => {
   pool.query(`
-    SELECT p.id, p.content, p.img_url, p.created_at, p.like_count, u.username, u.img_url as profile_img 
+    SELECT p.id, p.content, p.img_url, p.created_at, p.like_count, u.username, u.id as user_id, u.img_url as profile_img 
     FROM posting as p 
     JOIN users u on u.id = p.user_id 
     ORDER BY p.created_at DESC
@@ -44,8 +44,8 @@ router.get("/feed", (req, res) => {
   });
 });
 
-router.get("/user/feed", authMiddleware, (req, res) => {
-  const id = req.user.id;
+router.get("/user/feed/:id", (req, res) => {
+  const id = req.params.id;
 
   pool.query(`SELECT * FROM posting p WHERE user_id = ? ORDER BY p.created_at DESC`, [id], (err, result) => {
     if (err) res.status(400).json({ message: "Error" });
