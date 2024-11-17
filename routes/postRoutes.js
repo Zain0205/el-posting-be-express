@@ -25,7 +25,6 @@ router.post("/create", authMiddleware, upload.single("img_url"), (req, res) => {
   pool.query("INSERT INTO posting (user_id, img_url, content) VALUES (?, ?, ?)", [user_id, img_url, content], (err, result) => {
     if (err) {
 
-      console.log(err);
       return res.status(400).json({ message: "Error" });
     }
     res.status(201).json({ message: "Post created" });

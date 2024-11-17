@@ -26,7 +26,6 @@ router.get("/status/:follower_id/:following_id", (req, res) => {
 
   pool.query(`SELECT * FROM follows WHERE user_followed = ? AND user_following = ?`, [following_id, follower_id], (err, result) => {
     if (err) return res.status(400).json({ message: "Error" });
-    console.log(result);
     res.json({ isFollowing: result.length > 0 });
   });
 });
