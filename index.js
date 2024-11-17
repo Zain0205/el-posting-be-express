@@ -16,10 +16,13 @@ const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: 'http://localhost:5173', // sesuaikan dengan alamat frontend
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: "http://localhost:5173", // sesuaikan dengan alamat frontend
+    credentials: true,
+    methods: "GET,POST,PUT,PATCH,DELETE",
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 
