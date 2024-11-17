@@ -3,21 +3,31 @@ import pool from "../models/db.js";
 
 const router = express.Router();
 
-router.post("/follow", (req, res) => {
-  const { user_id, follower_id } = req.body;
+router.post("/add", (req, res) => {
+  const { userFollowing, userFollowed } = req.body;
 
-  pool.query(`INSERT INTO follows (user_id, follower_id) VALUES (?, ?)`, [user_id, follower_id], (err, result) => {
-    if (err) res.status(400).json({ message: "Error" });
-    res.status(201).json({ message: "Follow created" });
+  pool.query(`CALL FollowUser(?, ?)`, [userFollowing, userFollowed], (err, result) => {
+    if (err) return res.status(400).json({ message: "Error" });
+    res.status(200).json({ message: "User Followed" });
   });
 });
 
-router.delete("/unfollow/:id", (req, res) => {
-  const id = req.params.id;
+router.post("/remove", (req, res) => {
+  const { userFollowing, userFollowed } = req.body;
 
-  pool.query(`DELETE FROM follows WHERE id = ?`, [id], (err, result) => {
+  pool.query(`CALL UnfollowUser(?, ?)`, [userFollowing, userFollowed], (err, result) => {
     if (err) res.status(400).json({ message: "Error" });
     res.status(200).json({ message: "Follow deleted" });
+  });
+});
+
+router.get("/status/:follower_id/:following_id", (req, res) => {
+  const { follower_id, following_id } = req.params;
+
+  pool.query(`SELECT * FROM follows WHERE user_followed = ? AND user_following = ?`, [following_id, follower_id], (err, result) => {
+    if (err) return res.status(400).json({ message: "Error" });
+    console.log(result);
+    res.json({ isFollowing: result.length > 0 });
   });
 });
 
