@@ -9,11 +9,15 @@ import followRoutes from "./routes/followRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { Server } from "socket.io";
+import pool from "./models/db.js";
 
 dotenv.config();
 
 const app = express();
 const server = createServer(app);
+const io = new Server(server, { cors: { origin: "http://localhost:5173", methods: ["GET", "POST"] } });
+
 const PORT = process.env.PORT || 3000;
 
 app.use(
@@ -33,6 +37,45 @@ app.use("/api/comment", commentRoutes);
 app.use("/api/like", likeRoutes);
 app.use("/api/follow", followRoutes);
 app.use("/api/profile", profileRoutes);
+
+const onlineUser = new Map();
+
+io.on("connection", (socket) => {
+  socket.on("register", (userId) => {
+    onlineUser.set(userId, socket.id);
+    console.log(`User ${userId} registered with socket id ${socket.id}`);
+  });
+
+  socket.on("sendMessage", ({ senderId, receiverId, content }) => {
+    pool.query(`INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)`, [senderId, receiverId, content], (err, result) => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+
+      const selectedOnlineUser = onlineUser.get(receiverId);
+
+      if (selectedOnlineUser) {
+        io.to(selectedOnlineUser).emit("newMessage", {
+          id: result.insertId,
+          sender_id: senderId,
+          receiver_id: receiverId,
+          content,
+        });
+      }
+    });
+  });
+
+  socket.on("disconnect", () => {
+    for (let [key, value] of onlineUser.entries()) {
+      if (value === socket.id) {
+        onlineUser.delete(key);
+        console.log(`User ${key} disconnected`);
+        break;
+      }
+    }
+  });
+});
 
 server.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);
