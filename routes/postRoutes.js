@@ -52,12 +52,12 @@ router.get("/user/feed/:id", (req, res) => {
   });
 });
 
-router.get("/feed/detail/:id", (req, res) => {
+router.get("/detail/:id", (req, res) => {
   const id = req.params.id;
 
   pool.query(
     `
-    SELECT p.id, p.content, p.img_url, p.created_at, p.like_count, u.username 
+    SELECT p.id, p.content, p.img_url, p.created_at, p.like_count, u.username, u.id as user_id, u.img_url as profile_img 
     FROM posting as p 
     JOIN users u on u.id = p.user_id 
     WHERE p.id = ?`,
