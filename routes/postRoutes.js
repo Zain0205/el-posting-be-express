@@ -78,4 +78,22 @@ router.delete("/delete/:id", (req, res) => {
   });
 });
 
+router.patch("/:id/edit", authMiddleware, upload.single("img_url"), (req, res) => {
+  const id = req.params.id;
+  const { content } = req.body;
+  console.log(req.file);
+  const img_url = req.file ? `/uploads/${req.file.filename}` : null;
+
+  const query = img_url
+    ? "UPDATE posting SET content = ?, img_url = ? WHERE id = ?"
+    : "UPDATE posting SET content = ? WHERE id = ?";
+
+  const params = img_url ? [content, img_url, id] : [content, id];
+
+  pool.query(query, params, (err, result) => {
+    if (err) res.status(400).json({ message: "Error" });
+    res.status(200).json({ message: "Post updated" });
+  });
+});
+
 export default router;

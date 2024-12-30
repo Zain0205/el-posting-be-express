@@ -38,7 +38,7 @@ router.get("/check/:id", (req, res) => {
 router.get("/recomend", authMiddleware, (req, res) => {
   const id = req.user.id;
 
-  pool.query(`SELECT * FROM users WHERE id != ?`, [id], (err, result) => {
+  pool.query(`SELECT * FROM users WHERE id != ? ORDER BY RAND() LIMIT 6`, [id], (err, result) => {
     if (err) res.status(400).json({ message: "Error" });
     res.status(200).send(result);
   });
@@ -54,5 +54,14 @@ router.patch("/edit", authMiddleware, upload.single("img_url"), (req, res) => {
     res.status(200).json({ message: "Updated" });
   });
 });
+
+router.get("/search", (req, res) => {
+  const { username } = req.query;
+
+  pool.query(`SELECT * FROM users WHERE username LIKE ?`, [`%${username}%`], (err, result) => {
+    if (err) return res.status(400).json({ message: "Error" });
+    res.status(200).send(result);
+  });
+})
 
 export default router;

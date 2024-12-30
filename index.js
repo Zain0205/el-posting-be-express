@@ -56,52 +56,52 @@ io.on("connection", (socket) => {
         return;
       }
 
-      pool.query(
-        `
-    SELECT
-    c.id,
-    c.sender_id,
-    sender.username AS sender_username,
-    sender.img_url AS sender_avatar,
-    c.receiver_id,
-    receiver.username AS receiver_username,
-    receiver.img_url AS receiver_avatar,
-    c.content,
-    c.created_at
-FROM chats c
-         JOIN users AS sender ON c.sender_id = sender.id
-         JOIN users AS receiver ON c.receiver_id = receiver.id
-WHERE
-    (c.sender_id = ? AND c.receiver_id = ?) OR
-    (c.sender_id = ? AND c.receiver_id = ?)
-ORDER BY c.created_at DESC
-`,
-        [sender_id, receiver_id, receiver_id, sender_id],
-        (err, result) => {
-          if (err) {
-            console.error(err);
-            return;
-          }
+//       pool.query(
+//         `
+//     SELECT
+//     c.id,
+//     c.sender_id,
+//     sender.username AS sender_username,
+//     sender.img_url AS sender_avatar,
+//     c.receiver_id,
+//     receiver.username AS receiver_username,
+//     receiver.img_url AS receiver_avatar,
+//     c.content,
+//     c.created_at
+// FROM chats c
+//          JOIN users AS sender ON c.sender_id = sender.id
+//          JOIN users AS receiver ON c.receiver_id = receiver.id
+// WHERE
+//     (c.sender_id = ? AND c.receiver_id = ?) OR
+//     (c.sender_id = ? AND c.receiver_id = ?)
+// ORDER BY c.created_at DESC
+// `,
+//         [sender_id, receiver_id, receiver_id, sender_id],
+//         (err, result) => {
+//           if (err) {
+//             console.error(err);
+//             return;
+//           }
 
-          const selectedOnlineUser = onlineUser.get(receiver_id);
+//           const selectedOnlineUser = onlineUser.get(receiver_id);
 
-          const sender = result[0];
+//           const sender = result[0];
 
-          if (selectedOnlineUser) {
-            io.to(selectedOnlineUser).emit("newMessage", sender);
-          }
-        }
-      );
+//           if (selectedOnlineUser) {
+//             io.to(selectedOnlineUser).emit("newMessage", sender);
+//           }
+//         }
+//       );
 
-      // const selectedOnlineUser = onlineUser.get(receiver_id);
+      const selectedOnlineUser = onlineUser.get(receiver_id);
 
-      // if (selectedOnlineUser) {
-      //   io.to(selectedOnlineUser).emit("newMessage", {
-      //     sender_id: sender_id,
-      //     receiver_id: receiver_id,
-      //     content,
-      //   });
-      // }
+      if (selectedOnlineUser) {
+        io.to(selectedOnlineUser).emit("newMessage", {
+          sender_id: sender_id,
+          receiver_id: receiver_id,
+          content,
+        });
+      }
     });
   });
 

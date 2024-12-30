@@ -9,7 +9,7 @@ router.get("/list/:id", (req, res) => {
 
   pool.query(
     `
-    SELECT c.id, p.id, c.content, u.username, c.created_at, u.img_url
+    SELECT c.id , p.id as post, u.id as user_id, c.content, u.username, c.created_at, u.img_url
     FROM comments as c
     JOIN posting p on p.id = c.post_id
     JOIN users u on u.id = c.user_id
@@ -25,6 +25,7 @@ router.get("/list/:id", (req, res) => {
 
 router.delete("/delete/:id", (req, res) => {
   const id = req.params.id;
+  console.log(id);
 
   pool.query("DELETE FROM comments WHERE id = ?", [id], (err, result) => {
     if (err) res.status(400).json({ message: "Error" });
