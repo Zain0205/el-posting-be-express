@@ -28,7 +28,6 @@ router.post("/forgot-password", (req, res) => {
     // URL untuk reset password
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
 
-
     // Kirim email
     transporter.sendMail(
       {
@@ -44,7 +43,6 @@ router.post("/forgot-password", (req, res) => {
         res.status(200).json({ message: "Reset password link sent" });
       }
     );
-
   });
 });
 
@@ -86,50 +84,120 @@ router.post("/reset-password/:token", (req, res) => {
     const hashedPassword = bcrypt.hashSync(newPassword, 10);
 
     // Update password di database
-    pool.query(
-      "UPDATE users SET password = ? WHERE id = ?",
-      [hashedPassword, decoded.id],
-      (err, result) => {
-        if (err) {
-          return res.status(500).json({ message: "Database error" });
-        }
-        res.status(200).json({ message: "Password reset successful" });
+    pool.query("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, decoded.id], (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: "Database error" });
       }
-    );
+      res.status(200).json({ message: "Password reset successful" });
+    });
   } catch (err) {
     res.status(400).json({ message: "Invalid or expired token" });
   }
 });
 
-
 router.post("/register", (req, res) => {
   const { email, username, password } = req.body;
-  const hasedPassword = bcrypt.hashSync(password, 10);
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  const verificationToken = crypto.randomBytes(32).toString('hex');
 
-  pool.query("INSERT INTO users (email, username, password) VALUES (?, ?, ?)", [email, username, hasedPassword], (err, result) => {
-    if (err) res.status(400).json("Error");
-    res.status(201).json({ message: "User created" });
-  });
+  // Insert user with verification token
+  pool.query(
+    "INSERT INTO users (email, username, password, verification_token, is_verified) VALUES (?, ?, ?, ?, FALSE)",
+    [email, username, hashedPassword, verificationToken],
+    (err, result) => {
+      if (err) {
+        return res.status(400).json({ message: "Error creating user" });
+      }
+
+      // Send verification email
+      const verificationLink = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+      
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Verify your El Posting account',
+        html: `
+          <h1>Welcome to El Posting!</h1>
+          <p>Please click the link below to verify your email address:</p>
+          <a href="${verificationLink}">Verify Email</a>
+          <p>This link will expire in 24 hours.</p>
+        `
+      };
+
+      transporter.sendMail(mailOptions, (emailErr, info) => {
+        if (emailErr) {
+          // If email fails to send, delete the user
+          pool.query("DELETE FROM users WHERE email = ?", [email], () => {
+            return res.status(500).json({ 
+              message: "Failed to send verification email" 
+            });
+          });
+        } else {
+          res.status(201).json({ 
+            message: "Please check your email to verify your account" 
+          });
+        }
+      });
+    }
+  );
+});
+
+// Verification endpoint
+router.get("/verify-email/:token", (req, res) => {
+  const { token } = req.params;
+  
+  pool.query(
+    "UPDATE users SET is_verified = TRUE WHERE verification_token = ?",
+    [token],
+    (err, result) => {
+      if (err || result.affectedRows === 0) {
+        return res.status(400).json({ message: "Invalid or expired verification link" });
+      }
+      res.status(200).json({ message: "Email verified successfully" });
+    }
+  );
 });
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
-  pool.query("SELECT * FROM users WHERE email = ?", [email], async (err, result) => {
-    if (err) res.status(400).json({ message: "Error" });
-    if (result.length) {
-      const user = result[0];
-      const isPasswordCorrect = bcrypt.compareSync(password, user.password);
-      if (isPasswordCorrect) {
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-        res.cookie("token", token, { httpOnly: true, secure: false, maxAge: 24 * 60 * 60 * 1000 });
-        res.status(200).json({ token });
-      } else {
-        res.status(400).json({ message: "Invalid credentials" });
+
+  // Modified query to check both email and username
+  pool.query(
+    "SELECT * FROM users WHERE email = ? OR username = ?",
+    [email, email], // email disini bisa berisi email atau username dari input
+    (err, result) => {
+      if (err) {
+        return res.status(400).json({ message: "Error" });
       }
-    } else {
-      res.status(404).json({ message: "User Not Found" });
+
+      if (result.length) {
+        const user = result[0];
+
+        // Check if email is verified
+        if (!user.is_verified) {
+          return res.status(401).json({ message: "Please verify your email first" });
+        }
+
+        const isPasswordCorrect = bcrypt.compareSync(password, user.password);
+
+        if (isPasswordCorrect) {
+          const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+          res.cookie("token", token, {
+            httpOnly: true,
+            secure: false,
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          });
+
+          res.status(200).json({ token });
+        } else {
+          res.status(400).json({ message: "Invalid credentials" });
+        }
+      } else {
+        res.status(404).json({ message: "User Not Found" });
+      }
     }
-  });
+  );
 });
 
 router.post("/logout", (req, res) => {
